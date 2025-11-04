@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Cart Test</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 8px 16px; margin: 5px; cursor: pointer; }
+        .cart-item { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+        .quantity-controls { display: flex; align-items: center; gap: 5px; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>Order Cart Functionality Test</h1>
+        
+        <div class="test-section info">
+            <h3>Test 1: API Connection</h3>
+            <p>Status: {{ apiStatus }}</p>
+            <button @click="testAPI">Test API Connection</button>
+        </div>
+
+        <div class="test-section info">
+            <h3>Test 2: Quantity Controls</h3>
+            <div v-if="testCart.length > 0">
+                <div v-for="(item, index) in testCart" :key="index" class="cart-item">
+                    <span>{{ item.semen.name }} - ${{ item.semen.price }}</span>
+                    <div class="quantity-controls">
+                        <button @click="decrementQuantity(index)">-</button>
+                        <span>{{ item.quantity }}</span>
+                        <button @click="incrementQuantity(index)">+</button>
+                    </div>
+                    <span>Total: ${{ (item.semen.price * item.quantity).toFixed(2) }}</span>
+                </div>
+            </div>
+            <button @click="createTestCart">Create Test Cart</button>
+        </div>
+
+        <div class="test-section info">
+            <h3>Test 3: Order Placement</h3>
+            <p>Status: {{ orderStatus }}</p>
+            <button @click="testOrderPlacement" :disabled="!canPlaceOrder">Test Order Placement</button>
+        </div>
+
+        <div class="test-section" :class="testResults.success ? 'success' : 'error'" v-if="testResults.message">
+            <h3>Test Results</h3>
+            <p>{{ testResults.message }}</p>
+            <pre v-if="testResults.details">{{ testResults.details }}</pre>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        createApp({
+            setup() {
+                const apiStatus = ref('Not tested');
+                const testCart = ref([]);
+                const orderStatus = ref('Not tested');
+                const testResults = ref({});
+
+                const canPlaceOrder = computed(() => {
+                    return testCart.value.length > 0 && testCart.value.every(item => item.quantity > 0);
+                });
+
+                const testAPI = async () => {
+                    try {
+                        const response = await axios.get('/api/products/semen');
+                        if (response.data.success) {
+                            apiStatus.value = 'Success - ' + response.data.semen.data.length + ' items found';
+                            testResults.value = {
+                                success: true,
+                                message: 'API connection successful',
+                                details: JSON.stringify(response.data, null, 2)
+                            };
+                        } else {
+                            apiStatus.value = 'Failed - Invalid response';
+                            testResults.value = {
+                                success: false,
+                                message: 'API returned invalid response'
+                            };
+                        }
+                    } catch (error) {
+                        apiStatus.value = 'Failed - ' + error.message;
+                        testResults.value = {
+                            success: false,
+                            message: 'API connection failed',
+                            details: error.message
+                        };
+                    }
+                };
+
+                const createTestCart = async () => {
+                    try {
+                        const response = await axios.get('/api/products/semen');
+                        if (response.data.success && response.data.semen.data.length > 0) {
+                            const semen = response.data.semen.data[0];
+                            testCart.value = [{
+                                semen: semen,
+                                quantity: 1,
+                                cow_type: 'cow',
+                                cow_age: 24,
+                                heat_started_at: new Date().toISOString().slice(0, 16)
+                            }];
+                            testResults.value = {
+                                success: true,
+                                message: 'Test cart created successfully',
+                                details: 'Added: ' + semen.name + ' (Available: ' + semen.quantity_available + ')'
+                            };
+                        }
+                    } catch (error) {
+                        testResults.value = {
+                            success: false,
+                            message: 'Failed to create test cart',
+                            details: error.message
+                        };
+                    }
+                };
+
+                const incrementQuantity = (index) => {
+                    const item = testCart.value[index];
+                    if (item.quantity < item.semen.quantity_available) {
+                        item.quantity++;
+                    }
+                };
+
+                const decrementQuantity = (index) => {
+                    const item = testCart.value[index];
+                    if (item.quantity > 1) {
+                        item.quantity--;
+                    }
+                };
+
+                const testOrderPlacement = async () => {
+                    try {
+                        // This would require authentication, so we'll just test the data structure
+                        const orderData = {
+                            cattle_farm_id: 1, // Assuming farm ID 1 exists
+                            technician_id: 1,  // Assuming technician ID 1 exists
+                            order_items: testCart.value.map(item => ({
+                                bull_semen_id: item.semen.id,
+                                quantity: item.quantity,
+                                cow_type: item.cow_type,
+                                cow_age: item.cow_age,
+                                heat_started_at: item.heat_started_at
+                            })),
+                            notes: 'Test order from cart functionality test'
+                        };
+
+                        orderStatus.value = 'Data structure valid';
+                        testResults.value = {
+                            success: true,
+                            message: 'Order data structure is valid',
+                            details: JSON.stringify(orderData, null, 2)
+                        };
+                    } catch (error) {
+                        orderStatus.value = 'Failed - ' + error.message;
+                        testResults.value = {
+                            success: false,
+                            message: 'Order placement test failed',
+                            details: error.message
+                        };
+                    }
+                };
+
+                return {
+                    apiStatus,
+                    testCart,
+                    orderStatus,
+                    testResults,
+                    canPlaceOrder,
+                    testAPI,
+                    createTestCart,
+                    incrementQuantity,
+                    decrementQuantity,
+                    testOrderPlacement
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

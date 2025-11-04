@@ -1,0 +1,13 @@
+# Add these lines to your .env file:
+
+# Twilio Configuration for WhatsApp OTP
+TWILIO_SID=ACbafeda7ca0dcc46fc2c58281b9cc8e62
+TWILIO_TOKEN=6022221c3e259c9666950f8e2c5d8488
+TWILIO_FROM=+1234567890
+TWILIO_WHATSAPP_FROM=+14155238886
+
+# Note: 
+# - TWILIO_WHATSAPP_FROM should be +14155238886 (Twilio sandbox number)
+# - TWILIO_FROM can be left as +1234567890 since we're not using SMS fallback
+# - The system will automatically add "whatsapp:" prefix when needed
+
